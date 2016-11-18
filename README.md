@@ -4,11 +4,11 @@
 
 ###实现的效果:
 
-![播放器播放效果.gif](https://github.com/Developer-LiYang/LYVideoPlayer/blob/master/播放效果.gif"播放效果.gif")
+![播放器播放效果.gif](https://github.com/Developer-LiYang/LYVideoPlayer/blob/master/播放效果.gif)
 
-![自定义滑块2.png](https://github.com/Developer-LiYang/LYVideoPlayer/blob/master/个性化滑块1.png"个性化滑块1.png")
+![自定义滑块2.png](https://github.com/Developer-LiYang/LYVideoPlayer/blob/master/个性化滑块1.png)
 
-![自定义滑块3.png](https://github.com/Developer-LiYang/LYVideoPlayer/blob/master/个性化滑块2.png"个性化滑块2.png")
+![自定义滑块3.png](https://github.com/Developer-LiYang/LYVideoPlayer/blob/master/个性化滑块2.png)
 
 ###使用方法
 
