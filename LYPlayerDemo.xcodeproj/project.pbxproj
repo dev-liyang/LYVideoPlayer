@@ -27,6 +27,7 @@
 		B601F8C81DDAFFC2000D18D8 /* video_pause@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B601F8BC1DDAFFC2000D18D8 /* video_pause@2x.png */; };
 		B601F8C91DDAFFC2000D18D8 /* video_play@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B601F8BD1DDAFFC2000D18D8 /* video_play@2x.png */; };
 		B601F90D1DDD5861000D18D8 /* full_screen@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B601F90C1DDD5861000D18D8 /* full_screen@2x.png */; };
+		B649A95C20A88553005F733C /* LYVideoPresenter.m in Sources */ = {isa = PBXBuildFile; fileRef = B649A95A20A88553005F733C /* LYVideoPresenter.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +85,8 @@
 		B601F8BC1DDAFFC2000D18D8 /* video_pause@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "video_pause@2x.png"; sourceTree = "<group>"; };
 		B601F8BD1DDAFFC2000D18D8 /* video_play@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "video_play@2x.png"; sourceTree = "<group>"; };
 		B601F90C1DDD5861000D18D8 /* full_screen@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "full_screen@2x.png"; sourceTree = "<group>"; };
+		B649A95A20A88553005F733C /* LYVideoPresenter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LYVideoPresenter.m; sourceTree = "<group>"; };
+		B649A95B20A88553005F733C /* LYVideoPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LYVideoPresenter.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -181,6 +184,8 @@
 			isa = PBXGroup;
 			children = (
 				B601F8AD1DDAFFC2000D18D8 /* LYPlayerHeader.h */,
+				B649A95B20A88553005F733C /* LYVideoPresenter.h */,
+				B649A95A20A88553005F733C /* LYVideoPresenter.m */,
 				B601F8AE1DDAFFC2000D18D8 /* LYVideoPlayer.h */,
 				B601F8AF1DDAFFC2000D18D8 /* LYVideoPlayer.m */,
 				B601F8AB1DDAFFC2000D18D8 /* LYDownloadManager.h */,
@@ -372,6 +377,7 @@
 				B601F8C11DDAFFC2000D18D8 /* LYVideoPlayer.m in Sources */,
 				B601F7DB1DD5C798000D18D8 /* AppDelegate.m in Sources */,
 				B601F8BF1DDAFFC2000D18D8 /* UIImage+ComPress.m in Sources */,
+				B649A95C20A88553005F733C /* LYVideoPresenter.m in Sources */,
 				B601F8BE1DDAFFC2000D18D8 /* NSString+LYFileHandlePath.m in Sources */,
 				B601F8C31DDAFFC2000D18D8 /* LYSlider.m in Sources */,
 				B601F7D81DD5C798000D18D8 /* main.m in Sources */,
