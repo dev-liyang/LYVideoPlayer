@@ -6,21 +6,42 @@
 //  Copyright © 2016年 com.liyang.player. All rights reserved.
 //
 
-
 #import <UIKit/UIKit.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import "LYSlider.h"
 
+@class LYVideoPlayerControl;
+@protocol LYVideoPlayerControlDelegate <NSObject>
+@optional
+
+/**
+ 返回按钮被点击
+ */
+- (void)videoControlDidBackBtnClick;
+
+/**
+ 全屏按钮被点击
+ */
+- (void)videoControlDidFullScreenBtnClick;
+
+/**
+ @param isPause YES:暂停  NO:播放
+ */
+- (void)videoControl:(LYVideoPlayerControl*)videoControl didPlayBtnIsPause:(BOOL)isPause;
+
+/**
+ @param time 播放指定的时间（秒）
+ */
+- (void)videoControl:(LYVideoPlayerControl*)videoControl didPlayToTime:(CGFloat)time;
+
+@end
+
 @interface LYVideoPlayerControl : UIView
 
-@property (nonatomic, copy)  void (^playButtonClick_block)(BOOL selected);//播放/暂停
-@property (nonatomic, copy)  void (^sliderTouchEnd_block)(CGFloat time);//拖动滑块
-@property (nonatomic, copy)  void (^fastFastForwardAndRewind_block)(CGFloat time);//快进快退
-@property (nonatomic, copy)  void (^backButtonClick_block)();//返回
-@property (nonatomic, copy)  void (^fullScreenButtonClick_block)();//横屏播放
+@property (nonatomic, weak)   id <LYVideoPlayerControlDelegate> delegate;
 
-@property (nonatomic, assign) CGFloat  currentTime;
-@property (nonatomic, assign) CGFloat  totalTime;
+@property (nonatomic, assign) NSInteger  currentTime;
+@property (nonatomic, assign) NSInteger  totalTime;
 @property (nonatomic, assign) CGFloat  playValue;   //播放进度
 @property (nonatomic, assign) CGFloat  progress;    //缓冲进度
 
@@ -39,6 +60,7 @@
 - (void)playerControlPause;
 
 //横竖屏转换
-- (void)fullScreenChanged:(BOOL)isFullScreen;
+- (void)fullScreenChanged:(BOOL)isFullScreen frame:(CGRect)frame;
 
 @end
+

@@ -6,8 +6,9 @@
 //  Copyright © 2016年 com.liyang.player. All rights reserved.
 //
 
-
 #import "LYVideoPlayerControl.h"
+#import "UIImage+ComPress.h"
+
 #define TopHeight    40
 #define BottomHeight 40
 
@@ -39,13 +40,14 @@
 @property (nonatomic, strong) MPVolumeView *volumeView;  //系统音量控件
 @property (strong, nonatomic) UISlider* volumeViewSlider;//控制音量
 
+@property (nonatomic, strong) NSTimer *hideControlTimer;//隐藏控制view的定时器
 
 @end
 
 @implementation LYVideoPlayerControl
 {
     CGRect _frame;
-    BOOL   _isToShowControl;//是否去显示控制界面
+    BOOL   _isShowControl;//控制界面是否显示 YES:显示  NO:隐藏
     
     BOOL    _sliderIsTouching;//slider是否正在滑动
     CGPoint _startPoint;    //手势滑动的起始点
@@ -53,7 +55,6 @@
     BOOL    _isStartPan;    //记录手势开始滑动
     CGFloat _fastCurrentTime;//记录当前快进快退的时间
 }
-
 - (instancetype)initWithFrame:(CGRect)frame
 {
     self = [super initWithFrame:frame];
@@ -65,6 +66,7 @@
     return self;
 }
 - (void)creatUI{
+    _isShowControl = YES;
     
     self.volumeView.frame = self.bounds;
     
@@ -208,13 +210,13 @@
         
         //设置滑块图片样式
         // 1 通过颜色创建 Image
-         UIImage *normalImage = [UIImage createImageWithColor:[UIColor redColor] radius:5.0];
+        UIImage *normalImage = [UIImage createImageWithColor:[UIColor redColor] radius:5.0];
         
-//        UIView *normalImageView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 8, 8)];
-//        normalImageView.layer.cornerRadius = 1;
-//        normalImageView.layer.masksToBounds = YES;
-//        normalImageView.backgroundColor = [UIColor whiteColor];
-//        UIImage *normalImage = [UIImage creatImageWithView:normalImageView];
+        //        UIView *normalImageView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 8, 8)];
+        //        normalImageView.layer.cornerRadius = 1;
+        //        normalImageView.layer.masksToBounds = YES;
+        //        normalImageView.backgroundColor = [UIColor whiteColor];
+        //        UIImage *normalImage = [UIImage creatImageWithView:normalImageView];
         
         // 2 通过view 创建 Image
         UIView *highlightView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 12, 12)];
@@ -222,7 +224,7 @@
         highlightView.layer.masksToBounds = YES;
         highlightView.backgroundColor = [UIColor redColor];
         UIImage *highlightImage = [UIImage creatImageWithView:highlightView];
-
+        
         [_videoSlider setThumbImage:normalImage forState:UIControlStateNormal];
         [_videoSlider setThumbImage:highlightImage forState:UIControlStateHighlighted];
         
@@ -249,14 +251,14 @@
     return _volumeView;
 }
 
-- (void)setTotalTime:(CGFloat)totalTime{
+- (void)setTotalTime:(NSInteger)totalTime{
     _totalTime = totalTime;
-    self.totalLabel.text = [self timeFormatted:(int)totalTime];
+    self.totalLabel.text = [self timeFormatted:totalTime];
 }
-- (void)setCurrentTime:(CGFloat)currentTime{
+- (void)setCurrentTime:(NSInteger)currentTime{
     _currentTime = currentTime;
     if (_sliderIsTouching == NO) {
-        self.currentLabel.text = [self timeFormatted:(int)currentTime];
+        self.currentLabel.text = [self timeFormatted:currentTime];
     }
 }
 - (void)setPlayValue:(CGFloat)playValue{
@@ -277,53 +279,33 @@
 }
 - (void)sliderTouchEnd:(LYSlider *)slider{
     
-    if (self.sliderTouchEnd_block) {
-        self.sliderTouchEnd_block(slider.value * self.totalTime);
+    if (_delegate && [_delegate respondsToSelector:@selector(videoControl:didPlayToTime:)]) {
+        [_delegate videoControl:self didPlayToTime:slider.value * self.totalTime];
     }
     _sliderIsTouching = NO;
+    [self startHideControlTimer];
 }
 - (void)playButtonClick:(UIButton *)sender{
-    sender.selected = !sender.selected;
-    
-    if (self.playButtonClick_block) {
-        self.playButtonClick_block(!sender.selected);
+    [self startHideControlTimer];
+    if (_delegate && [_delegate respondsToSelector:@selector(videoControl:didPlayBtnIsPause:)]) {
+        [_delegate videoControl:self didPlayBtnIsPause:!sender.selected];
     }
 }
 - (void)backButtonClick:(UIButton *)sender{
-    if (self.backButtonClick_block) {
-        self.backButtonClick_block();
+    [self startHideControlTimer];
+    if (_delegate && [_delegate respondsToSelector:@selector(videoControlDidBackBtnClick)]) {
+        [_delegate videoControlDidBackBtnClick];
     }
 }
 - (void)fullScreenButtonClick:(UIButton *)sender{
-    if (self.fullScreenButtonClick_block) {
-        self.fullScreenButtonClick_block();
+    [self startHideControlTimer];
+    if (_delegate && [_delegate respondsToSelector:@selector(videoControlDidFullScreenBtnClick)]) {
+        [_delegate videoControlDidFullScreenBtnClick];
     }
 }
 - (void)tapGestureTouch:(UITapGestureRecognizer *)tapGesture{
-    if (_isToShowControl) {
-        self.panGesture.enabled = YES;
-        
-        [UIView animateWithDuration:0.3 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
-            
-            //            self.topView.alpha = 1;
-            //            self.bottomView.alpha = 1;
-            self.topView.frame = CGRectMake(0, 0, _frame.size.width, TopHeight);
-            self.bottomView.frame = CGRectMake(0, _frame.size.height - BottomHeight, _frame.size.width, BottomHeight);
-        } completion:^(BOOL finished) {
-            
-        }];
-    }else{
-        self.panGesture.enabled = NO;
-        [UIView animateWithDuration:0.3 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
-            //            self.topView.alpha = 0;
-            //            self.bottomView.alpha = 0;
-            self.topView.frame = CGRectMake(0, - TopHeight, _frame.size.width, TopHeight);
-            self.bottomView.frame = CGRectMake(0, _frame.size.height, _frame.size.width, BottomHeight);
-        } completion:^(BOOL finished) {
-            
-        }];
-    }
-    _isToShowControl = !_isToShowControl;
+    _isShowControl = !_isShowControl;
+    [self hideControlView];
 }
 - (void)panGestureTouch:(UIPanGestureRecognizer *)panGestureTouch{
     CGPoint touPoint = [panGestureTouch translationInView:self];
@@ -384,17 +366,19 @@
     }else if (panGestureTouch.state == UIGestureRecognizerStateEnded){
         self.fastTimeLabel.hidden = YES;
         if (changeXorY == 0) {
-            if (self.fastFastForwardAndRewind_block) {
-                self.fastFastForwardAndRewind_block(_fastCurrentTime);
+            if (_delegate && [_delegate respondsToSelector:@selector(videoControl:didPlayToTime:)]) {
+                [_delegate videoControl:self didPlayToTime:_fastCurrentTime];
             }
         }
+        [self startHideControlTimer];
     }
 }
 
-#pragma mark - Custom Methods
+#pragma mark - Public Methods
 //横竖屏转换
-- (void)fullScreenChanged:(BOOL)isFullScreen{
-    _frame = self.bounds;
+- (void)fullScreenChanged:(BOOL)isFullScreen frame:(CGRect)frame{
+    self.frame = frame;
+    _frame = frame;
     [self creatUI];
     
     self.fullScreenButton.selected = isFullScreen;
@@ -403,32 +387,77 @@
 }
 - (void)videoPlayerDidLoading{
     [self.activityView startAnimating];
-//    NSLog(@"正在加载");
 }
 - (void)videoPlayerDidBeginPlay{
     [self.activityView stopAnimating];
-//    NSLog(@"播放开始");
+    [self startHideControlTimer];
 }
 - (void)videoPlayerDidEndPlay{
-//    NSLog(@"播放结束");
+    //    NSLog(@"播放结束");
 }
 - (void)videoPlayerDidFailedPlay{
-//    NSLog(@"播放失败");
+    //    NSLog(@"播放失败");
 }
 
 - (void)playerControlPlay{
     self.playButton.selected = NO;
+    [self timerToJudgeHide];
 }
 - (void)playerControlPause{
     self.playButton.selected = YES;
 }
-//转换时间格式
-- (NSString *)timeFormatted:(int)totalSeconds
-{
-    int seconds = totalSeconds % 60;
-    int minutes = (totalSeconds / 60) % 60;
+
+#pragma mark - Private Method
+- (void)startHideControlTimer{
     
-    return [NSString stringWithFormat:@"%02d:%02d",minutes, seconds];
+    //销毁定时器
+    [_hideControlTimer invalidate];
+    _hideControlTimer = nil;
+    
+    //创建定时器
+    _hideControlTimer = [NSTimer scheduledTimerWithTimeInterval:3 target:self selector:@selector(timerToJudgeHide) userInfo:nil repeats:NO];
+}
+//定时隐藏掉控制界面
+- (void)timerToJudgeHide{
+    
+    if (_playButton.selected == YES) {//暂停中，不隐藏
+        return;
+    }
+    if (!_isShowControl) {//已经是隐藏状态了
+        return;
+    }
+    
+    //隐藏
+    _isShowControl = NO;
+    [self hideControlView];
+}
+
+- (void)hideControlView{
+    
+    CGFloat alpha = 0;
+    if (_isShowControl) {
+        alpha = 1;
+    }
+    
+    self.panGesture.enabled = _isShowControl;
+    
+    [UIView animateWithDuration:0.3 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+        self.topView.alpha = alpha;
+        self.bottomView.alpha = alpha;
+    } completion:^(BOOL finished) {
+        if (_isShowControl) {//如果当前是显示状态，就要去倒计时隐藏了
+            [self startHideControlTimer];
+        }
+    }];
+}
+
+//转换时间格式
+- (NSString *)timeFormatted:(NSInteger)totalSeconds
+{
+    NSInteger seconds = totalSeconds % 60;
+    NSInteger minutes = (totalSeconds / 60) % 60;
+    
+    return [NSString stringWithFormat:@"%02ld:%02ld",minutes, seconds];
 }
 
 #pragma mark - UIGestureRecognizer Delegate
@@ -441,3 +470,4 @@
 }
 
 @end
+

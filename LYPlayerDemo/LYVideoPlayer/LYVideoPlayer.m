@@ -8,14 +8,8 @@
 
 
 #import "LYVideoPlayer.h"
-#import "LYDownloadManager.h"
-#import "LYVideoPlayerControl.h"
 
-@interface LYVideoPlayer () <LYDownloadManagerDelegate>
-
-@property(nonatomic, strong)  LYDownloadManager *manager;       //数据下载器
-
-@property (nonatomic, strong) LYVideoPlayerControl *videoPlayControl;//用于控制视频播放界面的View
+@interface LYVideoPlayer ()
 
 @property (nonatomic, strong) AVPlayer *player;
 
@@ -23,15 +17,14 @@
 
 @property (nonatomic, strong) AVPlayerLayer *currentPlayerLayer;
 
-@property (nonatomic, strong) UIView *backgroundView;
-
 @property (nonatomic, strong) UIView *videoShowView;            //用于视频显示的View
 
 @property (nonatomic, strong) NSString *videoUrl;               //视频地址
 
 @property (nonatomic, strong) id timeObserve;   //监听播放进度
 
-@property (nonatomic, assign) CGFloat duration; //视频时间总长度
+@property (nonatomic, assign) CGFloat duration; //视频时间总长度(秒)
+@property (nonatomic, assign) CGFloat currentTime; //视频当前播放进度(秒)
 
 @property (nonatomic, assign) BOOL playButtonState;//playButtonState 用于 缓冲达到要求值的情况时如果状态是暂停，则不会自动播放
 
@@ -51,20 +44,17 @@
 - (void)playWithUrl:(NSString *)videoUrl showView:(UIView *)showView{
     self.videoUrl = videoUrl;
     
-    self.backgroundView = showView;
-    self.videoShowView.frame = self.backgroundView.bounds;
-    self.videoPlayControl.frame = self.backgroundView.bounds;
+    _videoShowView = showView;
+    _videoShowView.layer.masksToBounds = YES;
     
-    //实例化下载器，会根据URL查找当前本地有无缓存，处理结果在代理<LYDownloadManagerDelegate>方法内
-    self.manager = [[LYDownloadManager alloc] initWithURL:videoUrl withDelegate:self];
+    NSURL *url = [NSURL URLWithString:self.videoUrl];
+    [self getUrlToPlayVideo:url];
 }
 
 //播放前需要初始化的一些配置
 - (void)configureAndNotification{
     
     self.stopWhenAppDidEnterBackground = YES;
-    self.showTopControl = YES;
-    self.showBototmControl = YES;
     self.playButtonState = YES;
     self.isPlaying = NO;
     self.isCanToGetLocalTime = YES;
@@ -73,18 +63,6 @@
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appDidEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appDidEnterForeground) name:UIApplicationWillEnterForegroundNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playerItemDidPlayToEnd:) name:AVPlayerItemDidPlayToEndTimeNotification object:nil];
-}
-
-#pragma mark - LYDownloadManagerDelegate
-//没有缓存的完整的文件，自己根据url地址来播放
-- (void)didNoCacheFileWithManager:(LYDownloadManager *)manager{
-    NSURL *url = [NSURL URLWithString:self.videoUrl];
-    [self getUrlToPlayVideo:url];
-}
-//获取到已经缓存好的文件，直接用本地路径播放
-- (void)didFileExistedWithManager:(LYDownloadManager *)manager Path:(NSString *)filePath{
-    NSURL *url = [NSURL fileURLWithPath:filePath];
-    [self getUrlToPlayVideo:url];
 }
 
 #pragma mark - Setter/Getter
@@ -101,55 +79,6 @@
     }
 }
 
-- (UIView *)videoShowView{
-    if (!_videoShowView) {
-        _videoShowView = [[UIView alloc] init];
-        _videoShowView.layer.masksToBounds = YES;
-        [self.backgroundView addSubview:_videoShowView];
-    }
-    return _videoShowView;
-}
-- (LYVideoPlayerControl *)videoPlayControl{
-    if (!_videoPlayControl) {
-        _videoPlayControl = [[LYVideoPlayerControl alloc] initWithFrame:self.backgroundView.bounds];
-        [self.backgroundView addSubview:_videoPlayControl];
-        
-        __weak LYVideoPlayer *weakSelf = self;
-        //返回
-        [_videoPlayControl setBackButtonClick_block:^{
-            if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(videoPlayerDidBackButtonClick)]) {
-                [weakSelf.delegate videoPlayerDidBackButtonClick];
-            }
-        }];
-        //全屏
-        [_videoPlayControl setFullScreenButtonClick_block:^{
-            if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(videoPlayerDidFullScreenButtonClick)]) {
-                [weakSelf.delegate videoPlayerDidFullScreenButtonClick];
-            }
-        }];
-        //播放/暂停
-        [_videoPlayControl setPlayButtonClick_block:^(BOOL play) {
-            if (play) {
-                [weakSelf.player play];
-            }else{
-                [weakSelf.player pause];
-            }
-            weakSelf.playButtonState = !weakSelf.playButtonState;
-        }];
-        
-        //拖动滑块
-        [_videoPlayControl setSliderTouchEnd_block:^(CGFloat time) {
-            [weakSelf seekToTimePlay:time];
-        }];
-        
-        //快进快退
-        [_videoPlayControl setFastFastForwardAndRewind_block:^(CGFloat time) {
-            [weakSelf seekToTimePlay:time];
-        }];
-    }
-    return _videoPlayControl;
-}
-
 #pragma mark - Private methods
 //给定URL, 创建播放器 播放
 - (void)getUrlToPlayVideo:(NSURL *)url{
@@ -163,6 +92,7 @@
     self.currentPlayerItem = [AVPlayerItem playerItemWithURL:url];
     self.player = [AVPlayer playerWithPlayerItem:self.currentPlayerItem];
     self.currentPlayerLayer = [AVPlayerLayer playerLayerWithPlayer:self.player];
+    
     //设置layer的frame
     [self changePlayerLayerFrameWithVideoSize:self.videoSize];
     
@@ -196,6 +126,7 @@
     }
     [_videoShowView.layer addSublayer:self.currentPlayerLayer];
 }
+
 //拖动
 - (void)seekToTimePlay:(float)toTime{
     
@@ -206,7 +137,7 @@
         [self.loadedTimeRangeArr addObject:[self getLoadedTimeRange]];
         BOOL isShowActivity = [self judgeLoadedTimeIsShowActivity:toTime];
         if (isShowActivity) {
-            [self.videoPlayControl videoPlayerDidLoading];
+            [self delegateDidStartBuffer];
         }
         self.isCanToGetLocalTime = NO;  //拖动时停止获取本地时间
         __weak typeof(self) weak_self = self;
@@ -217,13 +148,11 @@
         }];
     }
 }
+
 //横竖屏转换
-- (void)fullScreenChanged:(BOOL)isFullScreen{
-    
-    self.videoShowView.frame = self.backgroundView.bounds;
-    self.videoPlayControl.frame = self.backgroundView.bounds;
-    self.currentPlayerLayer.frame = CGRectMake(0, 0, _videoShowView.bounds.size.width, _videoShowView.bounds.size.height);
-    [self.videoPlayControl fullScreenChanged:isFullScreen];
+- (void)fullScreenChanged:(CGRect)frame{
+    self.videoShowView.frame = frame;
+    self.currentPlayerLayer.frame = frame;
 }
 
 // 计算缓冲总进度
@@ -304,27 +233,38 @@
         
         if (self.currentBufferValue > self.lastBufferValue) {
             if ((self.currentBufferValue - self.lastBufferValue) > 5) {
-                [self.videoPlayControl videoPlayerDidBeginPlay];
+                [self delegateDidEndBuffer];
             }
             else if (self.currentBufferValue == self.duration){
-                [self.videoPlayControl videoPlayerDidBeginPlay];
+                [self delegateDidEndBuffer];
             }
             else if ((int)(self.currentBufferValue + self.lastBufferValue+1) >= (int)self.duration){
-                [self.videoPlayControl videoPlayerDidBeginPlay];
+                [self delegateDidEndBuffer];
             }
         }
         else{
             if (self.currentBufferValue > 10) {
-                [self.videoPlayControl videoPlayerDidBeginPlay];
+                [self delegateDidEndBuffer];
             }
             else if (self.currentBufferValue == self.duration){
-                [self.videoPlayControl videoPlayerDidBeginPlay];
+                [self delegateDidEndBuffer];
             }
             else if ((int)(self.currentBufferValue + self.duration + 1) >= (int)self.duration){
-                [self.videoPlayControl videoPlayerDidBeginPlay];
+                [self delegateDidEndBuffer];
             }
         }
         
+    }
+}
+
+- (void)delegateDidStartBuffer{
+    if (_delegate && [_delegate respondsToSelector:@selector(videoPlayerDidStartBuffer)]) {
+        [_delegate videoPlayerDidStartBuffer];
+    }
+}
+- (void)delegateDidEndBuffer{
+    if (_delegate && [_delegate respondsToSelector:@selector(videoPlayerDidEndBuffer)]) {
+        [_delegate videoPlayerDidEndBuffer];
     }
 }
 //播放（菊花显示逻辑）
@@ -334,28 +274,40 @@
     }
     self.isBufferEmpty = NO;
     self.isPlaying = YES;
-    [self.videoPlayControl videoPlayerDidBeginPlay];
+    [self delegateDidEndBuffer];
 }
 //播放
 - (void)play{
     if (self.playButtonState) {
         [self.player play];
-        [self.videoPlayControl playerControlPlay];
+        if (_delegate && [_delegate respondsToSelector:@selector(videoPlayerDidPlay)]) {
+            [_delegate videoPlayerDidPlay];
+        }
     }
 }
 #pragma mark - Public Methods
 //播放（外部播放方法）
 - (void)playVideo{
-    self.isPlaying = YES;
-    self.playButtonState = YES;
-    [self.player play];
-    [self.videoPlayControl playerControlPlay];
+    if (_currentTime == _duration) {
+        self.isPlaying = YES;
+        self.playButtonState = YES;
+        [self seekToTimePlay:0];
+    }else{
+        self.isPlaying = YES;
+        self.playButtonState = YES;
+        [self.player play];
+        if (_delegate && [_delegate respondsToSelector:@selector(videoPlayerDidPlay)]) {
+            [_delegate videoPlayerDidPlay];
+        }
+    }
 }
 //暂停播放
 - (void)pauseVideo{
     self.playButtonState = NO;
     [self.player pause];
-    [self.videoPlayControl playerControlPause];
+    if (_delegate && [_delegate respondsToSelector:@selector(videoPlayerDidPause)]) {
+        [_delegate videoPlayerDidPause];
+    }
 }
 
 //停止播放/清空播放器
@@ -371,9 +323,6 @@
     self.player = nil;
     self.currentPlayerItem = nil;
     
-    [self.videoPlayControl removeFromSuperview];
-    self.videoPlayControl = nil;
-    
     [self.loadedTimeRangeArr removeAllObjects];
     self.loadedTimeRangeArr = nil;
     
@@ -386,22 +335,26 @@
     self.timeObserve = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1) queue:dispatch_get_main_queue() usingBlock:^(CMTime time) {
         CGFloat current = CMTimeGetSeconds(time);
         CGFloat total = CMTimeGetSeconds(weakSelf.currentPlayerItem.duration);
-        CGFloat progress = current / total;
+        _currentTime = current;
         
-        weakSelf.videoPlayControl.currentTime = current;
-        weakSelf.videoPlayControl.playValue = progress;
+        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(videoPlayer:totalTime:)]) {
+            [weakSelf.delegate videoPlayer:weakSelf totalTime:total];
+        }
+        
+        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(videoPlayer:currentTime:)]) {
+            [weakSelf.delegate videoPlayer:weakSelf currentTime:current];
+        }
         
         /***** 这里是比较蛋疼的，当拖动滑块到没有缓冲的地方并且没有开始播放时，也会走到这里 *************/
         if (weakSelf.isCanToGetLocalTime) {
-             weakSelf.localTime = [weakSelf getLocalTime];
+            weakSelf.localTime = [weakSelf getLocalTime];
         }
         NSInteger timeNow = [weakSelf getLocalTime];
         if (timeNow - weakSelf.localTime > 1.5) {
-            [weakSelf.videoPlayControl videoPlayerDidBeginPlay];
+            [weakSelf delegateDidEndBuffer];
             weakSelf.isCanToGetLocalTime = YES;
         }
     }];
-    
     
     [self.currentPlayerItem addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionNew context:nil];//监听播放器的状态
     [self.currentPlayerItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:nil];//监听当前的缓冲进度
@@ -457,10 +410,11 @@
         CMTime duration = playerItem.duration;
         CGFloat totalDuration = CMTimeGetSeconds(duration);
         CGFloat progress = current / totalDuration;
-//        NSLog(@" ============== 缓冲进度 - %.2f", progress);
         
-        self.videoPlayControl.progress = progress;
-        self.videoPlayControl.totalTime = totalDuration;
+        if (_delegate && [_delegate respondsToSelector:@selector(videoPlayer:bufferProgress:)]) {
+            [_delegate videoPlayer:self bufferProgress:progress];
+        }
+        
         self.duration = totalDuration;
         self.currentBufferValue = current;
         
@@ -470,8 +424,8 @@
         self.isPlaying = NO;
         self.isBufferEmpty = YES;
         self.lastBufferValue = self.currentBufferValue;
-        [self.videoPlayControl videoPlayerDidLoading];
         
+        [self delegateDidStartBuffer];
         NSLog(@"====playbackBufferEmpty");
     }
 }
@@ -479,13 +433,18 @@
 #pragma mark - NSNotification
 //播放结束
 - (void)playerItemDidPlayToEnd:(NSNotification *)notification{
+    
     //重新开始播放
-    __weak typeof(self) weak_self = self;
-    [self.player seekToTime:CMTimeMake(0, 1) completionHandler:^(BOOL finished) {
-        __strong typeof(weak_self) strong_self = weak_self;
-        if (!strong_self) return;
-        [strong_self.player play];
-    }];
+    if (_replayWhenVideoPlayEnd) {
+        __weak typeof(self) weak_self = self;
+        [self.player seekToTime:CMTimeMake(0, 1) completionHandler:^(BOOL finished) {
+            __strong typeof(weak_self) strong_self = weak_self;
+            if (!strong_self) return;
+            [strong_self.player play];
+        }];
+    }else{
+        [self pauseVideo];
+    }
 }
 //进入后台
 - (void)appDidEnterBackground{
@@ -499,3 +458,4 @@
 }
 
 @end
+
