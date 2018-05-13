@@ -67,6 +67,7 @@
 }
 //横竖屏切换
 - (void)changeRotate:(NSNotification*)noti {
+    
     if ([[UIDevice currentDevice] orientation] == UIInterfaceOrientationPortrait
         || [[UIDevice currentDevice] orientation] == UIInterfaceOrientationPortraitUpsideDown) {
         //竖屏
@@ -76,32 +77,46 @@
         _isFullScreen = YES;
     }
     
-    [self setDeviceRotate];
+    [self autoSetDeviceRotate:[[UIDevice currentDevice] orientation]];
 }
+
+//自动横竖屏切换
+- (void)autoSetDeviceRotate:(UIDeviceOrientation)orientation{
+    [UIView animateWithDuration:0.25 animations:^{
+        [[UIDevice currentDevice] setValue:[NSNumber numberWithInteger:orientation] forKey:@"orientation"];
+        [self setSubViewFrames];
+    }];
+}
+
 //横竖屏切换
 - (void)setDeviceRotate{
+    UIDeviceOrientation orientation;
+    if (_isFullScreen) {
+        orientation = UIDeviceOrientationLandscapeLeft;
+    }else{
+        orientation = UIDeviceOrientationPortrait;
+    }
     
-    CGAffineTransform transform;
+    [UIView animateWithDuration:0.25 animations:^{
+        [[UIDevice currentDevice] setValue:[NSNumber numberWithInteger:orientation] forKey:@"orientation"];
+        [self setSubViewFrames];
+    }];
+}
+
+- (void)setSubViewFrames{
+    
     CGRect frame;
     if (_isFullScreen) {
         frame = [UIScreen mainScreen].bounds;
-        transform = CGAffineTransformMakeRotation(M_PI_2);
-//        [[UIApplication sharedApplication] setStatusBarOrientation:UIInterfaceOrientationLandscapeLeft animated:YES];
     }else{
         frame = _originFrame;
-        transform = CGAffineTransformIdentity;
-//        [[UIApplication sharedApplication] setStatusBarOrientation:UIInterfaceOrientationPortrait animated:YES];
     }
     
-    [[UIApplication sharedApplication] setStatusBarHidden:_isFullScreen];
-    
-    [UIView animateWithDuration:0.25 animations:^{
-        self.backgroundView.transform = transform;
-    }];
-    
     self.backgroundView.frame = frame;
+    
     [_videoPlayer fullScreenChanged:self.backgroundView.bounds];
     [_videoPlayControl fullScreenChanged:_isFullScreen frame:self.backgroundView.bounds];
+    
 }
 
 #pragma mark - 懒加载
