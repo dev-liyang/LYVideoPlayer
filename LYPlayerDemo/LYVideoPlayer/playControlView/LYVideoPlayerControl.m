@@ -439,7 +439,13 @@
         alpha = 1;
     }
     
-    self.panGesture.enabled = _isShowControl;
+    if (self.fullScreenButton.selected) {//全屏
+        self.panGesture.enabled = YES;
+    }else{
+        if (_halfScreenPanGestureEnabled) {
+            self.panGesture.enabled = _isShowControl;
+        }
+    }
     
     [UIView animateWithDuration:0.3 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
         self.topView.alpha = alpha;

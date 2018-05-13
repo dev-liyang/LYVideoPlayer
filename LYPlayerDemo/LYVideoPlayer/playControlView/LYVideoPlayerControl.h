@@ -44,6 +44,8 @@
 @property (nonatomic, assign) NSInteger  totalTime;
 @property (nonatomic, assign) CGFloat  playValue;   //播放进度
 @property (nonatomic, assign) CGFloat  progress;    //缓冲进度
+///半屏播放时，滑动手势在当前view(控制面板)唤起时是否可用
+@property (nonatomic, assign) BOOL halfScreenPanGestureEnabled;
 
 //播放器调用方法
 - (void)videoPlayerDidLoading;

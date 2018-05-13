@@ -55,6 +55,7 @@
     
     ///控制界面
     [self videoPlayControl];
+    _videoPlayControl.halfScreenPanGestureEnabled = YES;
 }
 
 //监听通知
