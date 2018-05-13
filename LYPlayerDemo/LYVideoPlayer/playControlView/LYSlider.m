@@ -112,6 +112,9 @@
 - (void)setBufferColor:(UIColor *)bufferColor{
     self.bufferImageView.backgroundColor = bufferColor;
 }
+- (void)setThumbValueColor:(UIColor *)thumbValueColor{
+    self.thumbImageView.backgroundColor = thumbValueColor;
+}
 - (void)setTrackHeight:(CGFloat)trackHeight{
     _trackHeight = trackHeight;
     [self creatUI];
@@ -170,7 +173,6 @@
     [self creatUI];
 }
 
-//
 - (BOOL)beginTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)event {
     CGPoint location = [touch locationInView:self];
     if (!CGRectContainsPoint(self.thumb.frame, location)) {
@@ -196,3 +198,4 @@
 }
 
 @end
+
