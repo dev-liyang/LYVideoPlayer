@@ -445,6 +445,10 @@
     }else{
         [self pauseVideo];
     }
+    
+    if (_delegate && [_delegate respondsToSelector:@selector(videoPlayerDidPlayToEnd)]) {
+        [_delegate videoPlayerDidPlayToEnd];
+    }
 }
 //进入后台
 - (void)appDidEnterBackground{

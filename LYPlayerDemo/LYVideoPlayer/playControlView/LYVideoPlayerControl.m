@@ -276,6 +276,7 @@
 - (void)sliderValueChange:(LYSlider *)slider{
     _sliderIsTouching = YES;
     self.currentLabel.text = [self timeFormatted:slider.value * self.totalTime];
+    [self startHideControlTimer];
 }
 - (void)sliderTouchEnd:(LYSlider *)slider{
     
@@ -305,7 +306,7 @@
 }
 - (void)tapGestureTouch:(UITapGestureRecognizer *)tapGesture{
     _isShowControl = !_isShowControl;
-    [self hideControlView];
+    [self showOrHideControlView];
 }
 - (void)panGestureTouch:(UIPanGestureRecognizer *)panGestureTouch{
     CGPoint touPoint = [panGestureTouch translationInView:self];
@@ -401,10 +402,13 @@
 
 - (void)playerControlPlay{
     self.playButton.selected = NO;
-    [self timerToJudgeHide];
+    [self startHideControlTimer];
 }
 - (void)playerControlPause{
     self.playButton.selected = YES;
+    //暂停时显示控制面板
+    _isShowControl = YES;
+    [self showOrHideControlView];
 }
 
 #pragma mark - Private Method
@@ -415,7 +419,7 @@
     _hideControlTimer = nil;
     
     //创建定时器
-    _hideControlTimer = [NSTimer scheduledTimerWithTimeInterval:3 target:self selector:@selector(timerToJudgeHide) userInfo:nil repeats:NO];
+    _hideControlTimer = [NSTimer scheduledTimerWithTimeInterval:2.5 target:self selector:@selector(timerToJudgeHide) userInfo:nil repeats:NO];
 }
 //定时隐藏掉控制界面
 - (void)timerToJudgeHide{
@@ -429,10 +433,10 @@
     
     //隐藏
     _isShowControl = NO;
-    [self hideControlView];
+    [self showOrHideControlView];
 }
 
-- (void)hideControlView{
+- (void)showOrHideControlView{
     
     CGFloat alpha = 0;
     if (_isShowControl) {
